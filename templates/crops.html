@@ -1,0 +1,534 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | My Crops{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-head">
+        <h2>My crops</h2>
+        <p>Add crops and track their growth stage</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="crop-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="message">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+        <div class="field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.errors %}{{ field.errors }}{% endif %}
+            {% if field.help_text %}<small class="helptext">{{ field.help_text }}</small>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="crop-upload-preview" id="crop-upload-preview" hidden>
+            <img id="crop-upload-image" alt="Selected crop photo preview">
+        </div>
+        <button type="submit">Add crop to my farm</button>
+    </form>
+    {% if suggested_soil %}
+    <div class="card soil-suggestion">
+        <h3>Soil type hint · {{ suggested_soil.location }}</h3>
+        <p><strong>{{ suggested_soil.soil_label }}</strong> is a broad state-level predominant-soil hint. {{ suggested_soil.note }}</p>
+        <p>This is not measured city/farm soil. Soils vary within a district; confirm with a soil test. {% if soil_is_estimate %}The hint is used only to contextualize care notes; it is not saved as a confirmed profile value.{% else %}Your saved soil type remains the one used for care notes.{% endif %}</p>
+        <a class="btn btn-secondary" href="{% url 'profile' %}">Review farm location and soil</a>
+    </div>
+    {% endif %}
+</section>
+
+<section class="section">
+    <div class="section-head">
+        <h2>Water, fertilizer & precautions</h2>
+        <p>General prompts based on crop stage, latest field reading and forecast</p>
+    </div>
+
+    {% if weather %}
+    <div class="card">
+        <h3>Weather · {{ weather.place }}</h3>
+        <p>{{ weather.temperature }}°C, {{ weather.description }}, humidity {{ weather.humidity }}%.</p>
+        <p style="margin-top: 0.5rem;">Forecast rain: {{ weather.today_rain|default_if_none:'—' }} mm today and {{ weather.tomorrow_rain|default_if_none:'—' }} mm tomorrow.</p>
+        <p style="margin-top: 0.5rem;"><strong>Watering note:</strong> {{ weather.rain_guidance }}</p>
+        <p style="margin-top: 0.5rem;">Updated {{ weather.time }} local time · Forecast by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Uses only your saved city/state for lookup.</p>
+    </div>
+    {% elif weather_error %}
+    <div class="card"><p>{{ weather_error }}</p></div>
+    {% else %}
+    <div class="card"><p>Add city and state in Farm Profile for a local weather forecast.</p></div>
+    {% endif %}
+
+    {% if crop_guidance %}
+        <div class="card-grid" style="margin-top: 1rem;">
+            {% for item in crop_guidance %}
+            <article class="card">
+                {% if item.crop.image %}
+                    <img class="crop-photo" src="{{ item.crop.image.url }}" alt="{{ item.crop.get_name_display }} crop photo">
+                {% else %}
+                    <div class="crop-photo-placeholder" aria-label="No crop photo uploaded">🌱</div>
+                {% endif %}
+                <span class="status">{{ item.crop.get_stage_display }}</span>
+                <h3 style="margin-top: 1rem;">{{ item.crop.get_name_display }}{% if item.crop.variety %} · {{ item.crop.variety }}{% endif %}</h3>
+                {% if item.crop.area_acres %}<p><strong>Area:</strong> {{ item.crop.area_acres }} acres</p>{% endif %}
+                {% if item.crop.planted_on %}<p><strong>Planted:</strong> {{ item.crop.planted_on|date:'M d, Y' }}</p>{% endif %}
+                <p style="margin-top: 0.8rem;"><strong>Water:</strong> {{ item.guidance.watering }}</p>
+                <p style="margin-top: 0.8rem;"><strong>Fertilizer timing:</strong> {{ item.guidance.fertilizer }}</p>
+                <p style="margin-top: 0.8rem;"><strong>Precautions:</strong> {{ item.guidance.precautions }}</p>
+
+                <section class="fertilizer-reference">
+                    <h4>Fertilizer nutrient reference · kg per acre</h4>
+                    {% if item.fertilizer_reference %}
+                    {% if item.fertilizer_reference.region_matches %}
+                    <p><strong>Regional source:</strong> {{ item.fertilizer_reference.region }}</p>
+                    {% else %}
+                    <p><strong>Not locally verified for {{ profile.state|default:'your state' }}.</strong> This is a {{ item.fertilizer_reference.region_state }} reference only; do not apply it as a local prescription.</p>
+                    {% endif %}
+                    {% if item.fertilizer_reference.note %}<p>{{ item.fertilizer_reference.note }}</p>{% endif %}
+                    {% if item.fertilizer_reference.variants %}
+                    {% for variant in item.fertilizer_reference.variants %}
+                    <div class="fertilizer-reference-row">
+                        <strong>{{ variant.label }}</strong>
+                        <p>N: {{ variant.n|floatformat:1 }} kg/acre · {{ variant.p_label }}: {% if variant.p is not None %}{{ variant.p|floatformat:1 }} kg/acre{% else %}not specified{% endif %} · {{ variant.k_label }}: {% if variant.k is not None %}{{ variant.k|floatformat:1 }} kg/acre{% else %}not specified{% endif %}</p>
+                        {% if variant.total %}
+                        <p>For {{ item.crop.area_acres }} acres: N {% if variant.total.n is not None %}{{ variant.total.n|floatformat:1 }}{% else %}—{% endif %} kg · P {% if variant.total.p is not None %}{{ variant.total.p|floatformat:1 }}{% else %}—{% endif %} kg · K {% if variant.total.k is not None %}{{ variant.total.k|floatformat:1 }}{% else %}—{% endif %} kg</p>
+                        {% endif %}
+                        {% if variant.districts %}<p>Applies to the listed districts: {{ variant.districts }}.</p>{% endif %}
+                        <p><strong>Timing:</strong> {{ variant.timing }}</p>
+                    </div>
+                    {% endfor %}
+                    <p class="helptext">These are nutrient amounts, not urea/DAP/NPK fertilizer-product or bag amounts. Source notation and local conditions matter. Confirm variety, soil test, irrigation and crop stage with your local KVK/agriculture officer before use. Nutrient references do not automatically fill or change your farm schedule.</p>
+                    {% else %}
+                    <p>No numeric dose is shown because the source does not establish an unambiguous recommendation.</p>
+                    {% endif %}
+                    <p><a href="{{ item.fertilizer_reference.source_url }}" target="_blank" rel="noopener noreferrer">Source: {{ item.fertilizer_reference.source_name }}</a></p>
+                    {% else %}
+                    <p>No source-verified numeric nutrient reference is available for this crop yet. Ask your local KVK/agriculture office for a soil-test-based recommendation.</p>
+                    {% endif %}
+                </section>
+
+                <details class="fertilizer-details">
+                    <summary>Set fertilizer amount and interval</summary>
+                    <p class="helptext">Enter the amount and interval from a soil test or local agriculture/KVK recommendation. AgriAir calculates the farm total and next date; it does not invent a dose.</p>
+                    <form method="post" action="{% url 'add-fertilizer-schedule' item.crop.pk %}" class="fertilizer-form">
+                        {% csrf_token %}
+                        {% for field in item.schedule_form %}
+                        <div class="fertilizer-field">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.help_text %}<small class="helptext">{{ field.help_text }}</small>{% endif %}
+                            {% if field.errors %}{{ field.errors }}{% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit">Save fertilizer schedule</button>
+                    </form>
+                </details>
+
+                <div class="fertilizer-schedules">
+                    <h4>Fertilizer plan & next dates</h4>
+                    {% if item.fertilizer_schedules %}
+                        {% for schedule in item.fertilizer_schedules %}
+                        <div class="fertilizer-plan-row">
+                            <div>
+                                <strong>{{ schedule.fertilizer_name }}</strong>
+                                <p>Advised rate: {{ schedule.rate_per_acre }} {{ schedule.unit }}/acre</p>
+                                {% if schedule.total_amount %}
+                                <p>For {{ item.crop.area_acres }} acres: <strong>{{ schedule.total_amount|floatformat:2 }} {{ schedule.unit }}</strong></p>
+                                {% else %}
+                                <p>Add farm area in the crop details to calculate the total amount.</p>
+                                {% endif %}
+                                <p>Every {{ schedule.interval_days }} days · Last/first date: {{ schedule.last_applied_on|date:'M d, Y' }}</p>
+                                {% if schedule.next_due_on < today %}
+                                    <span class="status status-pending">Due since {{ schedule.next_due_on|date:'M d, Y' }}</span>
+                                {% elif schedule.next_due_on == today %}
+                                    <span class="status status-due">Due today</span>
+                                {% else %}
+                                    <span class="status">Next due {{ schedule.next_due_on|date:'M d, Y' }}</span>
+                                {% endif %}
+                                {% if schedule.advisory_source %}<p>Based on: {{ schedule.advisory_source }}</p>{% endif %}
+                            </div>
+                            <div class="fertilizer-actions">
+                                <form method="post" action="{% url 'mark-fertilizer-applied' schedule.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary">Mark applied today</button>
+                                </form>
+                                <form method="post" action="{% url 'delete-fertilizer-schedule' schedule.pk %}" onsubmit="return confirm('Remove this fertilizer schedule? Existing farm log entries will remain.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary">Remove schedule</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No fertilizer schedule saved for this crop.</p>
+                    {% endif %}
+                </div>
+
+                <details class="activity-details">
+                    <summary>Log watering, fertilizer or field condition</summary>
+                    <form method="post" action="{% url 'log-crop-activity' item.crop.pk %}" class="activity-form">
+                        {% csrf_token %}
+                        {% for field in item.activity_form %}
+                        <div class="activity-field{% if field.name == 'completed' %} activity-check{% endif %}">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.errors %}{{ field.errors }}{% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit">Save crop log</button>
+                    </form>
+                </details>
+
+                <div class="activity-history">
+                    <h4>Recent farm log</h4>
+                    {% if item.activities %}
+                        {% for activity in item.activities %}
+                        <div class="activity-row">
+                            <div>
+                                <strong>{{ activity.get_activity_type_display }}</strong>
+                                <span class="status{% if not activity.completed %} status-pending{% endif %}">{% if activity.completed %}Done{% else %}Pending{% endif %}</span>
+                                {% if activity.product_or_method %}<p>{{ activity.product_or_method }}{% if activity.quantity %} · {{ activity.quantity }} {{ activity.unit }}{% endif %}</p>{% endif %}
+                                <p>Crop condition: {{ activity.get_condition_display }}{% if activity.notes %} · {{ activity.notes }}{% endif %}</p>
+                            </div>
+                            <time>{{ activity.recorded_at|date:'M d, Y H:i' }}</time>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No watering or input records for this crop yet.</p>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card" style="margin-top: 1rem;">
+            <p>Add a crop above to see care notes tailored to its growth stage.</p>
+        </div>
+    {% endif %}
+
+    <div class="message">
+        These are general reminders, not agronomic prescriptions. Water needs differ by crop, soil, weather, irrigation method and sensor calibration. Use a soil test and local KVK/agriculture officer recommendations for fertilizer and dose. Do not apply fertilizer before heavy rain or on waterlogged soil.
+    </div>
+</section>
+
+<style>
+    .crop-form {
+        max-width: 760px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem 1rem;
+    }
+
+    .crop-form .field input,
+    .crop-form .field select {
+        width: 100%;
+        min-height: 46px;
+        margin-top: 0.4rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        font: inherit;
+    }
+
+    .crop-form .field input[type="file"] {
+        height: auto;
+        padding: 0.6rem;
+        background: #f8fbf6;
+        cursor: pointer;
+    }
+
+    .crop-photo,
+    .crop-photo-placeholder {
+        display: grid;
+        width: 100%;
+        height: 190px;
+        margin-bottom: 1rem;
+        place-items: center;
+        border-radius: 14px;
+        background: #eaf5e9;
+        object-fit: cover;
+        color: var(--primary);
+        font-size: 3rem;
+    }
+
+    .soil-suggestion {
+        max-width: 760px;
+        margin-top: 1rem;
+    }
+
+    .soil-suggestion p + p {
+        margin-top: 0.55rem;
+    }
+
+    .activity-details {
+        margin-top: 1.2rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+    }
+
+    .fertilizer-details {
+        margin-top: 1.2rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+    }
+
+    .fertilizer-details summary {
+        color: var(--primary-dark);
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .fertilizer-details > .helptext {
+        display: block;
+        margin-top: 0.6rem;
+    }
+
+    .fertilizer-reference {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #f4f9f1;
+    }
+
+    .fertilizer-reference h4 {
+        margin-bottom: 0.55rem;
+    }
+
+    .fertilizer-reference-row {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .fertilizer-reference-row p,
+    .fertilizer-reference > p {
+        margin-top: 0.45rem;
+    }
+
+    .fertilizer-form {
+        max-width: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem 1rem;
+        margin-top: 0.8rem;
+        padding: 1rem;
+        box-shadow: none;
+        background: #f8fbf6;
+    }
+
+    .fertilizer-field label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .fertilizer-field input,
+    .fertilizer-field select {
+        width: 100%;
+        min-height: 42px;
+        padding: 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: white;
+    }
+
+    .fertilizer-field .helptext {
+        display: block;
+        margin-top: 0.3rem;
+    }
+
+    .fertilizer-form button {
+        grid-column: 1 / -1;
+    }
+
+    .fertilizer-schedules {
+        margin-top: 1rem;
+    }
+
+    .fertilizer-schedules h4 {
+        margin-bottom: 0.6rem;
+    }
+
+    .fertilizer-plan-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .fertilizer-plan-row p {
+        margin-top: 0.35rem;
+    }
+
+    .fertilizer-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 180px;
+    }
+
+    .fertilizer-actions form {
+        margin: 0;
+        padding: 0;
+        background: none;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .fertilizer-actions button {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        margin: 0;
+    }
+
+    .status-due {
+        background: #ffe9cf;
+        color: #7b4300;
+    }
+
+    .activity-details summary {
+        color: var(--primary-dark);
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .activity-form {
+        max-width: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem 1rem;
+        margin-top: 0.8rem;
+        padding: 1rem;
+        box-shadow: none;
+        background: #f8fbf6;
+    }
+
+    .activity-field label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .activity-field input:not([type="checkbox"]),
+    .activity-field select {
+        width: 100%;
+        min-height: 42px;
+        padding: 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: white;
+    }
+
+    .activity-check {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+    }
+
+    .activity-check label {
+        margin: 0;
+    }
+
+    .activity-check input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+    }
+
+    .activity-form button {
+        grid-column: 1 / -1;
+    }
+
+    .activity-history {
+        margin-top: 1.2rem;
+    }
+
+    .activity-history h4 {
+        margin-bottom: 0.6rem;
+    }
+
+    .activity-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.8rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .activity-row p {
+        margin-top: 0.3rem;
+    }
+
+    .activity-row time {
+        color: var(--muted);
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    .status-pending {
+        color: #805100;
+        background: #fff1d6;
+    }
+
+    .crop-form .field:last-of-type,
+    .crop-form button {
+        grid-column: 1 / -1;
+    }
+
+    .crop-upload-preview {
+        grid-column: 1 / -1;
+    }
+
+    .crop-upload-preview img {
+        display: block;
+        width: min(100%, 360px);
+        max-height: 220px;
+        border-radius: 14px;
+        object-fit: cover;
+    }
+
+    @media (max-width: 680px) {
+        .crop-form { grid-template-columns: 1fr; }
+        .activity-form { grid-template-columns: 1fr; }
+        .fertilizer-form { grid-template-columns: 1fr; }
+        .activity-form button { grid-column: auto; }
+        .fertilizer-form button { grid-column: auto; }
+        .activity-row { flex-direction: column; }
+        .fertilizer-plan-row { flex-direction: column; }
+        .crop-form .field:last-of-type,
+        .crop-form button { grid-column: auto; }
+    }
+</style>
+<script>
+    const cropPhotoInput = document.getElementById('id_image');
+    const cropPhotoPreview = document.getElementById('crop-upload-preview');
+    const cropPhotoPreviewImage = document.getElementById('crop-upload-image');
+    let cropPhotoObjectUrl;
+
+    cropPhotoInput.addEventListener('change', () => {
+        if (cropPhotoObjectUrl) {
+            URL.revokeObjectURL(cropPhotoObjectUrl);
+            cropPhotoObjectUrl = undefined;
+        }
+
+        const file = cropPhotoInput.files[0];
+        if (!file) {
+            cropPhotoPreview.hidden = true;
+            cropPhotoPreviewImage.removeAttribute('src');
+            return;
+        }
+
+        cropPhotoObjectUrl = URL.createObjectURL(file);
+        cropPhotoPreviewImage.src = cropPhotoObjectUrl;
+        cropPhotoPreview.hidden = false;
+    });
+</script>
+{% endblock %}

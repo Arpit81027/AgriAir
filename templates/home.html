@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Home{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div>
+        <div class="badge">Smart farming for every season</div>
+        <h1>Grow more with cleaner data and better field decisions</h1>
+        <p>
+            AgriAir brings crop health, soil insights, irrigation planning, and field recommendations together in one modern platform built for farmers and agribusiness teams.
+        </p>
+        <div class="cta-row">
+            <a class="btn btn-primary" href="{% url 'dashboard' %}">View Dashboard</a>
+            <a class="btn btn-secondary" href="{% url 'recommendations' %}">Explore Recommendations</a>
+        </div>
+    </div>
+
+    <div class="hero-visual">
+        <img class="hero-photo" src="https://images.unsplash.com/photo-1530507629858-e4977d30e9e0?auto=format&fit=crop&w=1200&q=85" alt="Woman farmer harvesting rice in a paddy field">
+        <div class="floating-card">
+            <strong>96%</strong>
+            <span>Healthy crop trend this week</span>
+        </div>
+    </div>
+</div>
+
+<section class="section">
+    <div class="section-head">
+        <h2>What AgriAir offers</h2>
+        <p>Tools designed to keep farms productive and efficient.</p>
+    </div>
+    <div class="card-grid">
+        <div class="card">
+            <div class="icon">🌱</div>
+            <h3>Crop Monitoring</h3>
+            <p>Review live metrics and field performance signals for healthier seasonal planning.</p>
+        </div>
+        <div class="card">
+            <div class="icon">📈</div>
+            <h3>Yield Forecasting</h3>
+            <p>Understand crop progression with practical predictions and actionable growth insights.</p>
+        </div>
+        <div class="card">
+            <div class="icon">💧</div>
+            <h3>Smart Guidance</h3>
+            <p>Receive suggestions on irrigation, nutrient balance, and crop timing across seasons.</p>
+        </div>
+    </div>
+</section>
+
+<section class="showcase">
+    <div class="showcase-card">
+        <img src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=900&q=80" alt="Tractor in field">
+        <h3>Field operations made simple</h3>
+        <p>Track irrigation cycles, crop stages, and farm health from one clear dashboard.</p>
+    </div>
+
+    <div class="showcase-card">
+        <img src="https://images.unsplash.com/photo-1464226184884-fa520f5f9f81?auto=format&fit=crop&w=900&q=80" alt="Agriculture technology">
+        <h3>Better decisions with actionable insights</h3>
+        <p>Use trend-aware recommendations to improve yields, reduce waste, and plan for the next season smarter.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-head">
+        <h2>Farm performance overview</h2>
+        <p>Updated based on current field conditions</p>
+    </div>
+    <div class="metrics">
+        <div class="metric">
+            <div class="value">72%</div>
+            <span class="label">Soil moisture</span>
+        </div>
+        <div class="metric">
+            <div class="value">28°C</div>
+            <span class="label">Air temperature</span>
+        </div>
+        <div class="metric">
+            <div class="value">64%</div>
+            <span class="label">Humidity</span>
+        </div>
+        <div class="metric">
+            <div class="value">Low</div>
+            <span class="label">Irrigation need</span>
+        </div>
+    </div>
+</section>
+{% endblock %}

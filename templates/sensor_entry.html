@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Sensor Data{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-head">
+        <h2>Field sensor data</h2>
+        <p>Log the latest soil and weather readings</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save reading</button>
+    </form>
+</div>
+{% endblock %}

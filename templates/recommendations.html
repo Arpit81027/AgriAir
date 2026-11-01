@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Recommendations{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-head">
+        <h2>Field recommendations</h2>
+        <p>Actionable insights for better productivity</p>
+    </div>
+    <div class="card-grid">
+        {% for item in recommendations %}
+        <div class="card">
+            <div class="icon">🌾</div>
+            <h3>{{ item.crop }}</h3>
+            <p><strong>{{ item.fit }}</strong></p>
+            <p>{{ item.reason }}</p>
+            <p style="margin-top: 0.8rem;"><strong>Action:</strong> {{ item.action }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Login{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <aside class="auth-visual">
+        <div class="auth-visual-content">
+            <span class="badge">Welcome back</span>
+            <h2>Your farm, at a glance.</h2>
+            <p>Sign in to check field readings, follow crop progress, and plan your next move with confidence.</p>
+        </div>
+    </aside>
+
+    <div class="auth-panel">
+        <h1>Welcome back</h1>
+        <p class="auth-subtitle">Just your username and password. You can add farm details later from your profile.</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="non-field-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+                <div class="field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}{{ field.errors }}{% endif %}
+                    {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Sign in to your farm</button>
+        </form>
+
+        <p class="auth-switch">New to AgriAir? <a href="{% url 'register' %}">Create an account</a></p>
+    </div>
+</section>
+{% endblock %}

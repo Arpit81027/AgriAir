@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Dashboard{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-head">
+        <h2>Farm dashboard</h2>
+        <p>Live overview of field conditions</p>
+    </div>
+
+    {% if profile %}
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3>{{ profile.farm_name }}</h3>
+        <p><strong>Location:</strong> {{ profile.city|default:profile.district }}{% if profile.state %}, {{ profile.state }}{% endif %} | <strong>Soil:</strong> {{ profile.get_soil_type_display|default:'Not provided' }} | <strong>Crop:</strong> {{ profile.crop_type }}</p>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <div class="section-head">
+            <h2>Local weather</h2>
+            <p>Live conditions and short forecast</p>
+        </div>
+        {% if weather %}
+        <div class="metrics">
+            <div class="metric">
+                <div class="value">{{ weather.temperature }}°C</div>
+                <span class="label">{{ weather.description }} · {{ weather.place }}</span>
+            </div>
+            <div class="metric">
+                <div class="value">{{ weather.humidity }}%</div>
+                <span class="label">Relative humidity</span>
+            </div>
+            <div class="metric">
+                <div class="value">{{ weather.today_rain|default_if_none:'—' }} mm</div>
+                <span class="label">Forecast rain today</span>
+            </div>
+            <div class="metric">
+                <div class="value">{{ weather.tomorrow_rain|default_if_none:'—' }} mm</div>
+                <span class="label">Forecast rain tomorrow</span>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 1rem;">
+            <p><strong>Watering note:</strong> {{ weather.rain_guidance }}</p>
+            <p style="margin-top: 0.5rem;">Wind {{ weather.wind_speed }} km/h · Updated {{ weather.time }} (local time)</p>
+            <p style="margin-top: 0.5rem;">Forecast by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Uses only your saved city/state for lookup.</p>
+        </div>
+        {% else %}
+        <div class="card">
+            <p>{{ weather_error|default:'Add your city and state in Farm Profile to show live local weather.' }}</p>
+            <p style="margin-top: 0.5rem;"><a class="btn btn-secondary" href="{% url 'profile' %}">Update farm location</a></p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="metrics">
+        {% for metric in metrics %}
+        <div class="metric">
+            <div class="value">{{ metric.value }}</div>
+            <span class="label">{{ metric.label }}</span>
+            <p style="margin-top: 0.8rem; color: var(--muted);">{{ metric.note }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-head">
+        <h2>My crop plan</h2>
+        <a class="btn btn-primary" href="{% url 'crops' %}">Add / manage crops</a>
+    </div>
+    {% if crops %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Crop</th>
+                <th>Variety</th>
+                <th>Stage</th>
+                <th>Area</th>
+                <th>Planting date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for crop in crops %}
+            <tr>
+                <td>
+                    {% if crop.image %}
+                        <img src="{{ crop.image.url }}" alt="{{ crop.get_name_display }} crop photo" style="width: 64px; height: 48px; object-fit: cover; border-radius: 8px; vertical-align: middle; margin-right: 0.5rem;">
+                    {% endif %}
+                    {{ crop.get_name_display }}
+                </td>
+                <td>{{ crop.variety|default:'—' }}</td>
+                <td>{{ crop.get_stage_display }}</td>
+                <td>{{ crop.area_acres|default:'—' }}{% if crop.area_acres %} acres{% endif %}</td>
+                <td>{{ crop.planted_on|date:'M d, Y'|default:'—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="card">
+        <p>No crops added yet. Add your crop and growth stage to get watering and fertilizer timing notes.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h3>Recent field readings</h3>
+    {% if readings %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Soil</th>
+                <th>Temp</th>
+                <th>Humidity</th>
+                <th>Rainfall</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reading in readings %}
+            <tr>
+                <td>{{ reading.timestamp|date:'M d, Y H:i' }}</td>
+                <td>{{ reading.soil_moisture }}%</td>
+                <td>{{ reading.temperature }}°C</td>
+                <td>{{ reading.humidity }}%</td>
+                <td>{{ reading.rainfall }} mm</td>
+                <td>{{ reading.irrigation_status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="card">
+        <p>No sensor data recorded yet. Add your first field reading to unlock smarter recommendations.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

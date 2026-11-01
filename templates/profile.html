@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Profile{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-head">
+        <h2>Farm profile</h2>
+        <p>Update farm details for personalized recommendations</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save profile</button>
+    </form>
+
+    {% if suggested_soil %}
+    <div class="card" style="max-width: 520px; margin-top: 1rem;">
+        <h3>Indicative soil hint · {{ suggested_soil.location }}</h3>
+        <p><strong>{{ suggested_soil.soil_label }}</strong> is a broad state-level hint. {{ suggested_soil.note }}</p>
+        <p style="margin-top: 0.6rem;">It is not measured city- or farm-level soil. Confirm with a soil test before using it to choose fertilizer.</p>
+        <button type="button" class="btn btn-secondary" id="use-soil-hint" style="margin-top: 0.8rem;">Use this hint in my profile</button>
+        {% if profile.soil_type %}
+            <p style="margin-top: 0.6rem;">Your saved soil type is <strong>{{ profile.get_soil_type_display }}</strong>.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% if suggested_soil %}
+<script>
+    document.getElementById('use-soil-hint').addEventListener('click', () => {
+        const soilField = document.getElementById('id_soil_type');
+        soilField.value = '{{ suggested_soil.soil_code|escapejs }}';
+        soilField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+</script>
+{% endif %}
+{% endblock %}

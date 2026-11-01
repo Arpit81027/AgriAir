@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Create Account{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <aside class="auth-visual">
+        <div class="auth-visual-content">
+            <span class="badge">Let's grow together</span>
+            <h2>Good farming starts with a clear view.</h2>
+            <p>Create your account to bring farm details, crop insights, and field readings together in one place.</p>
+        </div>
+    </aside>
+
+    <div class="auth-panel">
+        <h1>Create your account</h1>
+        <p class="auth-subtitle">Start with a username and password. Farm and location details are optional.</p>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="non-field-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+                <div class="field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}{{ field.errors }}{% endif %}
+                    {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}
+                    {% if field.name == 'state' %}
+                        <span class="helptext" id="soil-estimate" aria-live="polite">Choose a state to see a broad typical-soil estimate. Soil can vary by district and farm.</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Create my account</button>
+        </form>
+
+        <p class="auth-switch">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+    </div>
+</section>
+
+<script>
+    const stateField = document.getElementById('id_state');
+    const soilEstimate = document.getElementById('soil-estimate');
+    const soilByState = {
+        'Andhra Pradesh': 'red_yellow',
+        'Arunachal Pradesh': 'mountain',
+        'Assam': 'alluvial',
+        'Bihar': 'alluvial',
+        'Chhattisgarh': 'red_yellow',
+        'Goa': 'laterite',
+        'Gujarat': 'black',
+        'Haryana': 'alluvial',
+        'Himachal Pradesh': 'mountain',
+        'Jharkhand': 'red_yellow',
+        'Karnataka': 'red_yellow',
+        'Kerala': 'laterite',
+        'Madhya Pradesh': 'black',
+        'Maharashtra': 'black',
+        'Manipur': 'red_yellow',
+        'Meghalaya': 'mountain',
+        'Mizoram': 'red_yellow',
+        'Nagaland': 'mountain',
+        'Odisha': 'red_yellow',
+        'Punjab': 'alluvial',
+        'Rajasthan': 'arid',
+        'Sikkim': 'mountain',
+        'Tamil Nadu': 'red_yellow',
+        'Telangana': 'red_yellow',
+        'Tripura': 'red_yellow',
+        'Uttar Pradesh': 'alluvial',
+        'Uttarakhand': 'mountain',
+        'West Bengal': 'alluvial',
+        'Andaman and Nicobar Islands': 'laterite',
+        'Chandigarh': 'alluvial',
+        'Dadra and Nagar Haveli and Daman and Diu': 'black',
+        'Delhi': 'alluvial',
+        'Jammu and Kashmir': 'mountain',
+        'Ladakh': 'arid',
+        'Lakshadweep': 'laterite',
+        'Puducherry': 'red_yellow'
+    };
+    const soilLabels = {
+        alluvial: 'Alluvial soil',
+        black: 'Black (Regur) soil',
+        red_yellow: 'Red and yellow soil',
+        laterite: 'Laterite soil',
+        arid: 'Arid / desert soil',
+        mountain: 'Mountain / forest soil'
+    };
+
+    stateField.addEventListener('change', () => {
+        const soil = soilByState[stateField.value];
+        soilEstimate.textContent = soil
+            ? `Broad state-level estimate: ${soilLabels[soil]}. This is not a soil test; soil can vary by district and farm.`
+            : 'Choose a state to see a broad typical-soil estimate. Soil can vary by district and farm.';
+    });
+</script>
+{% endblock %}

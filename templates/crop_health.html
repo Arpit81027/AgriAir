@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}AgriAir | Crop Health Check{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-head">
+        <h2>Crop health check</h2>
+        <p>Symptom-based preliminary screening for common crop problems</p>
+    </div>
+
+    <div class="card">
+        <p><strong>How it works:</strong> Choose your crop, then select at least two signs you can clearly see. The list narrows to common problems for that crop. AgriAir gives possible matches, not an AI photo or laboratory diagnosis.</p>
+    </div>
+
+    <form method="post" class="health-form">
+        {% csrf_token %}
+
+        <div class="field">
+            {{ form.crop.label_tag }}
+            {{ form.crop }}
+            {{ form.crop.errors }}
+        </div>
+
+        <fieldset class="symptom-fieldset">
+            <legend>{{ form.symptoms.label }}</legend>
+            {% if form.symptoms.help_text %}<p class="helptext">{{ form.symptoms.help_text }}</p>{% endif %}
+            <p class="helptext" id="symptom-count" aria-live="polite">Select at least two signs that best match the affected plant.</p>
+            <div class="symptom-grid">
+                {% for checkbox in form.symptoms %}
+                    <label class="symptom-option">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>
+                {% endfor %}
+            </div>
+            {{ form.symptoms.errors }}
+        </fieldset>
+
+        <button type="submit">Check crop symptoms</button>
+    </form>
+    {{ crop_symptom_map|json_script:"crop-symptom-map" }}
+</section>
+
+{% if show_results %}
+<section class="section" aria-live="polite">
+    <div class="section-head">
+        <h2>Screening results: {{ crop_name }}</h2>
+    </div>
+    <div class="card">
+        <p><strong>Selected signs:</strong> {{ selected_symptoms|join:', ' }}</p>
+    </div>
+
+    {% if candidates %}
+        <div class="card-grid" style="margin-top: 1rem;">
+            {% for item in candidates %}
+            <article class="card">
+                <span class="status">Possible match · {{ item.match_count }} signs matched</span>
+                <h3 style="margin-top: 1rem;">{{ item.name }}</h3>
+                <p><strong>Signs matched:</strong> {{ item.matched_labels|join:', ' }}</p>
+                <p><strong>Type:</strong> {{ item.cause }}</p>
+                <p style="margin-top: 0.7rem;"><strong>First steps:</strong> {{ item.care }}</p>
+                <p style="margin-top: 0.7rem;"><strong>Pesticide guidance:</strong> {{ item.pesticide }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card" style="margin-top: 1rem;">
+            <h3>No strong match found</h3>
+            <p>The selected signs do not match at least two signs of a listed condition. Check the whole plant (including leaf undersides, stem, roots, fruit and nearby plants), select more specific signs if present, or show a clear photo/sample to your local KVK or agriculture officer. Do not spray based only on this result.</p>
+        </div>
+    {% endif %}
+
+    <div class="message">
+        <strong>Important pesticide safety:</strong> These are general possibilities, not prescriptions. Confirm the diagnosis with a local agricultural expert. Use only a product currently registered for this crop and disease in your area, and follow its label, protective-equipment instructions, re-entry period, and pre-harvest interval. Never mix products or change the dose based on this page.
+    </div>
+</section>
+{% endif %}
+
+<style>
+    .health-form {
+        max-width: 860px;
+    }
+
+    .health-form select {
+        width: 100%;
+        min-height: 48px;
+        margin-top: 0.45rem;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 1rem;
+    }
+
+    .symptom-fieldset {
+        margin: 1.5rem 0 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .symptom-fieldset legend {
+        font-weight: 700;
+    }
+
+    .symptom-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 0.7rem;
+        margin-top: 0.8rem;
+    }
+
+    .symptom-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255,255,255,0.78);
+        color: var(--text);
+        line-height: 1.45;
+        cursor: pointer;
+    }
+
+    .symptom-option[hidden] {
+        display: none;
+    }
+
+    .symptom-option input {
+        width: auto;
+        margin: 0.15rem 0 0;
+        accent-color: var(--primary);
+    }
+
+    @media (max-width: 720px) {
+        .health-form { padding: 1rem; }
+    }
+</style>
+<script>
+    const cropSelect = document.getElementById('id_crop');
+    const symptomMapElement = document.getElementById('crop-symptom-map');
+    const symptomCount = document.getElementById('symptom-count');
+
+    if (cropSelect && symptomMapElement) {
+        const cropSymptoms = JSON.parse(symptomMapElement.textContent);
+        const symptomOptions = Array.from(document.querySelectorAll('.symptom-option'));
+
+        const updateSymptomOptions = (clearHidden = false) => {
+            const available = new Set(cropSymptoms[cropSelect.value] || []);
+            let shownCount = 0;
+            let checkedCount = 0;
+            symptomOptions.forEach((option) => {
+                const checkbox = option.querySelector('input');
+                const visible = available.has(checkbox.value);
+                option.hidden = !visible;
+                if (visible) {
+                    shownCount += 1;
+                    if (checkbox.checked) checkedCount += 1;
+                } else if (clearHidden) {
+                    checkbox.checked = false;
+                }
+            });
+            symptomCount.textContent = `${checkedCount} selected · ${shownCount} signs available for this crop. Select at least two.`;
+        };
+
+        updateSymptomOptions();
+        cropSelect.addEventListener('change', () => updateSymptomOptions(true));
+        document.querySelector('.symptom-grid').addEventListener('change', () => updateSymptomOptions());
+    }
+</script>
+{% endblock %}
